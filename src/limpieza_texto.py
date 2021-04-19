@@ -1,76 +1,88 @@
 import geopy
 from geopy.geocoders import Nominatim
 import numpy as np
+from functools import reduce
+from pandas import json_normalize
+import operator
+import requests
+import json
+import pandas as pd
 
-def ciudad(lon_lat):
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
+import src.limpieza_texto as lt
+
+def getFromDict(diccionario,mapa):
+    return reduce(operator.getitem,mapa,diccionario)
+
+
+def find_locations(tipo_sitio, limite, nuevo_nombre):
+    
     '''
-    This function returns take the latitude and longitude and returns the name of the city.
-
-    Atributtes:
-        -lon_lat: longitude and latitude.
-
-    '''
-    locator = Nominatim(user_agent="myGeocoder")
-    coord = lon_lat
-    rgeocode = locator.reverse(coord)
-    info = rgeocode.raw
-    city = info ['address']['city']
-    return city
-
-def comunidad(lon_lat):
-    '''
-    This function returns take the latitude and longitude and returns the name of the state.
-
-    Atributtes:
-        -lon_lat: longitude and latitude.
+    This functions returns a json file with the location of the types of places desired.
+    
+    Parameters:
+        -tipo_sitio: kind of place to search (F.E.: vegan)
+        -limite: number of places we want.
+        -Nuevo_nombre: name for the json file.
         
     '''
-    locator = Nominatim(user_agent="myGeocoder")    
-    coord = lon_lat
-    rgeocode = locator.reverse(coord)
-    info = rgeocode.raw
-    comu = info ['address']['state']
-    return comu
 
-def pais(lon_lat):
+    tok1 = os.getenv("tok_id")
+    tok2 = os.getenv("tok_s")
+
+    san_francisco = {'type': 'Point', 'coordinates': [37.7579, -122.4192]}
     
-    '''
-    This function returns take the latitude and longitude and returns the name of the country.
-
-    Atributtes:
-        -lon_lat: longitude and latitude.
+    
+    url_query = 'https://api.foursquare.com/v2/venues/explore'
+    
+    parametros = {
+    "client_id": tok1,
+    "client_secret": tok2,
+    "v": "20180323",
+    "ll": f"{san_francisco.get('coordinates')[0]},{san_francisco.get('coordinates')[1]}",
+    "query": f"{tipo_sitio}", 
+    "limit": limite    
+    }
+    
+    resp = requests.get(url= url_query, params = parametros).json()
+    
+    decode = resp.get("response").get("groups")[0]
+    
+    json_normalize(decode)
+    
+    decode_otravez = decode.get("items")
+    
+    mapa_nombre =  ["venue", "name"]
+    mapa_latitud = ["venue", "location", "lat"]
+    mapa_longitud = ["venue", "location", "lng"]
+    
+    coord = []
+    for dic in decode_otravez:
+        paralista = {}
+        paralista["name"] = lt.getFromDict(dic, mapa_nombre)
+        paralista["latitud"]= lt.getFromDict(dic, mapa_latitud)
+        paralista["longitud"] = lt.getFromDict(dic,mapa_longitud)
+        coord.append(paralista)
         
-    '''
-    locator = Nominatim(user_agent="myGeocoder")
-    coord = lon_lat
-    rgeocode = locator.reverse(coord)
-    info = rgeocode.raw
-    pais = info ['address']['country']
-    return pais
+    documentos = []
+    for diccionario in coord:
+        temporal = {
+            "name" : diccionario.get("name"),
+            "location" : {"type" : "Point", "coordinates" : [diccionario.get("longitud"),diccionario.get("latitud")]}
+        }
+        documentos.append(temporal)
+        
+    df = pd.DataFrame(documentos)
+    
+    df.to_json(f"./json/{nuevo_nombre}.json", orient = "records")
 
-def download_dataset():
-    '''Downloads a dataset from kaggle and only keeps the csv in your data file. Beware of your own data structure:
-    this creates a data directory and also moves all the .csv files next to your jupyter notebooks to it.
-    Takes: url from kaggle
-    Returns: a folder with the downloaded and unzipped csv
-    '''
-    
-    #Gets the name of the dataset.zip
-    url = input("Introduce la url: ")
-    
-    #Gets the name of the dataset.zip
-    endopint = url.split("/")[-1]
-    user = url.split("/")[-2]
+    return df
 
-    #Download, decompress and leaves only the csv
-    download = f"kaggle datasets download -d {user}/{endopint}"
-    decompress = f"tar -xzvf {endopint}.zip"
-    delete = f"del {endopint}.zip"
- 
-    for i in [download, decompress, delete]:
-        os.system(i)
-    
-    #Move the csv to uour data folder
-    move_and_delete = "move hkm.csv data/"
-    return os.system(move_and_delete)
+def lat(coord):
+    return coord.get("coordinates")[0]
+
+def lon(coord):
+    return coord.get("coordinates")[1]

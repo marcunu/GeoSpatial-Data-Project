@@ -1,44 +1,54 @@
 import numpy as np
+import folium
+from folium import Choropleth, Circle, Marker, Icon, Map
+from folium.plugins import HeatMap, MarkerCluster
+import pandas as pd
 
 
-def download_dataset():
-    '''Downloads a dataset from kaggle and only keeps the csv in your data file. Beware of your own data structure:
-    this creates a data directory and also moves all the .csv files next to your jupyter notebooks to it.
-    Takes: url from kaggle
-    Returns: a folder with the downloaded and unzipped csv
+def markers(dataframe, etiqueta, icono, color_f, color_i):
+    
+    '''
+    This functions make markers with the selected dataframe.
+    
+    Parameters:
+        -DataFrame: the dataframe with the location.
+        -Etiqueta: name for the label.
+        -icon: the shape of the icon.
+        -color_f: background color.
+        -Color_i: color for the icon.
+        
     '''
     
-    #Gets the name of the dataset.zip
-    url = input("Introduce la url: ")
+    df = dataframe
     
-    #Gets the name of the dataset.zip
-    endopint = url.split("/")[-1]
-    user = url.split("/")[-2]
+    for i in df["location"]:
+        dicc = {
+            "location" : [i.get("coordinates")[1], i.get("coordinates")[0]],
+            "tooltip" : etiqueta        
+        }
     
-    #Download, decompress and leaves only the csv
-    download = f"kaggle datasets download -d {user}/{endopint}"
-    decompress = f"tar -xzvf {endopint}.zip"
-    delete = f"rm -rf {endopint}.zip"
-    make_directory = "mkdir data"
-    lista = "ls >> archivos.txt"
+        ic = Icon (color = color_f,
+                prefix = "fa",
+                icon = icono,
+                icon_color = color_i)
     
-    for i in [download, decompress, delete, make_directory, lista]:
-        os.system(i)
-    
-    #Move the csv to uour data folder
-    move_and_delete = f"mv *.csv data"
-    return os.system(move_and_delete)
+        Marker(**dicc, icon = ic).add_to(san_f)
 
 
-def cambio_minutos(valor):
-    '''
-    Change a time format string from HH:MM:SS to minutes integer
-    '''
-    try:
-        horas = float(valor[0])*60
-        minut = float(valor[2] + valor[3])
-        seg = float(valor[5] + valor[6]) /60
-        tiempo = round(horas + minut + seg, 2)
-        return tiempo
-    except:
-        return np.nan
+def heat_map(columna, dat, nombre_grupo, nombre_capa, mapa):
+    df = dat[dat.type == columna]
+    nombre_grupo = folium.FeatureGroup(name = nombre_capa)
+    HeatMap(data= df[["latitud","longitud"]], radius = 15).add_to(nombre_grupo)
+    nombre_grupo.add_to(mapa)
+
+
+def query_dist(local, distancia):
+
+    san_francisco = [-122.42046743548889, 37.77203444922543]
+    coord_point = {"type":"Point", "coordinates": san_francisco}
+    
+    cond = {"location":{"$near":{"$geometry":coord_point, "$maxDistance": distancia}}}
+    query = local.find(cond)
+    df = pd.DataFrame(list(query))
+    
+    return df
