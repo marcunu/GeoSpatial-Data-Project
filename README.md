@@ -59,11 +59,12 @@ As a data engineer I have asked all the employees to show their preferences on w
 # Python libraries
 
 * Pandas
-* Seaborn
+* Pymongo
 * Json
 * Requests
-* BeautifulSoup
-* Geopy
-* Mathplotlib
+* GeoPandas
 * Numpy
+* Dotenv
+* Folium
+* operator
 * Personal function library (limpieza_texto & visualizacion)
