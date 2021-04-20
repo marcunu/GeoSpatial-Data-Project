@@ -36,6 +36,15 @@ def markers(dataframe, etiqueta, icono, color_f, color_i):
 
 
 def heat_map(columna, dat, nombre_grupo, nombre_capa, mapa):
+    '''
+    This function creates a heat map
+    parameters:
+        -columna: column from the dataframe 
+        -dat: dataframe
+        -nombre_grupo: name for the group to create.
+        -nomber capa: layer name
+        -mapa: map where the layer is going to be added.
+    '''
     df = dat[dat.type == columna]
     nombre_grupo = folium.FeatureGroup(name = nombre_capa)
     HeatMap(data= df[["latitud","longitud"]], radius = 15).add_to(nombre_grupo)
@@ -43,8 +52,16 @@ def heat_map(columna, dat, nombre_grupo, nombre_capa, mapa):
 
 
 def query_dist(local, distancia):
+    '''
+    this function returns the companies that are in the desired radius.
 
-    san_francisco = [-122.42046743548889, 37.77203444922543]
+    Parameters:
+        -Local: type of company
+        -Distancia: max distance
+
+    '''
+
+    san_francisco = [-122.40651979413546, 37.76528668651395]
     coord_point = {"type":"Point", "coordinates": san_francisco}
     
     cond = {"location":{"$near":{"$geometry":coord_point, "$maxDistance": distancia}}}
